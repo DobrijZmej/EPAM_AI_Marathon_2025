@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.log
+
+# Terraform state
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# Local environment files
+.env
+*.pem
+
+# Node/npm (якщо є)
+node_modules/
+
+# IDE/OS junk
+.DS_Store
+*.swp
+.idea/
+.vscode/
+terraform/.terraform.lock.hcl
+terraform/terraform.exe
+terraform/lambda/ask_handler.zip
