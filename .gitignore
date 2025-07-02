@@ -23,3 +23,12 @@ node_modules/
 terraform/.terraform.lock.hcl
 terraform/terraform.exe
 terraform/lambda/ask_handler.zip
+deploy.cmd
+terraform/terraform.tfstate.1751460811.backup
+terraform/terraform.tfstate.1751460893.backup
+.gitignore
+terraform/terraform.tfstate.1751460906.backup
+terraform/terraform.tfstate.1751460920.backup
+terraform/terraform.tfstate.1751460934.backup
+terraform/terraform.tfstate.1751461116.backup
+lambda/ask_handler.zip

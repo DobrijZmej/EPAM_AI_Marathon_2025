@@ -1,7 +1,33 @@
 import base64
 import json
 import boto3
+import botocore
 from openai import OpenAI
+import os
+
+print("boto3:", boto3.__version__)
+print("botocore:", botocore.__version__)
+
+kb_id = os.environ.get('BEDROCK_KB_ID')
+
+def get_bedrock_kb_context(question, kb_id):
+    client = boto3.client("bedrock-agent-runtime", region_name="eu-central-1")
+    try:
+        print(f"kb_id: {kb_id}")
+        print(f"question: {question}")
+        response = client.retrieve(
+            knowledgeBaseId=kb_id,
+            retrievalQuery={"text": question}
+        )
+        # результат — релевантні chunks у response["retrievalResults"]
+        docs = []
+        for item in response.get("retrievalResults", []):
+            doc_text = item.get("content", {}).get("text", "")
+            docs.append(doc_text)
+        return docs  # список релевантних фрагментів
+    except Exception as e:
+        print(f"❌ KB Retrieve exception: {e}")
+        return []
 
 def extract_jwt_claims_from_header(headers):
     auth = headers.get("authorization") or headers.get("Authorization")
@@ -102,12 +128,23 @@ def handler(event, context):
             "body": json.dumps({"error": "Не вдалося завантажити OpenAI API ключ"})
         }
 
+    # 1. Витягуємо релевантний контекст через AWS RAG (Bedrock Knowledge Base)
+    try:
+        rag_context = get_bedrock_kb_context(question, kb_id)
+        print(f"🔗 RAG context: {rag_context}")
+    except Exception as e:
+        print(f"❌ Не вдалося отримати RAG context: {e}")
+        rag_context = ""  # Якщо RAG не доступний — ідемо далі тільки з питанням
+
+    # 2. Формуємо prompt з цим контекстом (RAG + питання)
+    prompt = f"Knowledge base: {rag_context}\n\nUser: {question}\nAssistant:"
+
     client = OpenAI(api_key=secret.get("api_key"))
 
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": question}],
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
         )
         print(response)
         gpt_answer = response.choices[0].message.content

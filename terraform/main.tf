@@ -109,3 +109,9 @@ module "api" {
   lambda_function_name = aws_lambda_function.ask_handler.function_name
   lambda_invoke_arn    = aws_lambda_function.ask_handler.invoke_arn
 }
+
+module "storage" {
+  source       = "./modules/storage"
+  project_name = var.project_name
+}
+

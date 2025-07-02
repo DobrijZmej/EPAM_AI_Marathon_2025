@@ -29,6 +29,11 @@ resource "aws_lambda_function" "ask_handler" {
   layers = [
     "arn:aws:lambda:eu-central-1:226802345751:layer:openai-layer:3"
   ]
+  environment {
+    variables = {
+      BEDROCK_KB_ID = "BAYTVPOCZJ"
+    }
+  }
 }
 
 resource "aws_iam_policy" "lambda_openai_secret_policy" {
