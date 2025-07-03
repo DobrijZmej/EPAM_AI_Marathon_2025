@@ -27,7 +27,8 @@ resource "aws_lambda_function" "ask_handler" {
   source_code_hash = filebase64sha256("${path.module}/lambda/ask_handler.zip")
   role          = aws_iam_role.lambda_exec.arn
   layers = [
-    "arn:aws:lambda:eu-central-1:226802345751:layer:openai-layer:3"
+    "arn:aws:lambda:eu-central-1:226802345751:layer:openai-layer:3",
+    "arn:aws:lambda:eu-central-1:226802345751:layer:boto3-layer-1-34-74:2"
   ]
   environment {
     variables = {

@@ -64,6 +64,10 @@
         </div>
 
         <div class="response-box" id="response">Тут буде відповідь агента...</div>
+        <div id="wait-status" class="mt-2 text-secondary" style="display:none;">⏳ Очікуємо відповідь...</div>
+        <button id="play-audio-btn" class="btn btn-outline-primary mt-2" style="display:none;" onclick="playAudio()">🔊 Відтворити відповідь</button>
+        <audio id="audio-player" src="" style="display:none;"></audio>
+
       </div>
     </div>
   </div>
@@ -150,6 +154,72 @@
         responseDiv.innerText = '⚠️ Помилка: ' + err.message;
       }
     }
+
+// Функція для декодування base64 у Blob та відтворення
+let audioBlob = null;
+
+function playAudio() {
+  if (audioBlob) {
+    const url = URL.createObjectURL(audioBlob);
+    const audio = document.getElementById('audio-player');
+    audio.src = url;
+    audio.style.display = 'block';
+    audio.play();
+  }
+}
+
+async function send() {
+  const token = localStorage.getItem('token');
+  const responseDiv = document.getElementById('response');
+  const waitStatus = document.getElementById('wait-status');
+  const playBtn = document.getElementById('play-audio-btn');
+  const audioElem = document.getElementById('audio-player');
+  audioElem.pause();
+  audioElem.style.display = 'none';
+  playBtn.style.display = 'none';
+  responseDiv.innerText = '';
+  waitStatus.style.display = 'block';
+
+  try {
+    const res = await fetch('https://70qflf9mz1.execute-api.eu-central-1.amazonaws.com/ask', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', ...(token && {'Authorization': 'Bearer ' + token})},
+      body: JSON.stringify({question: document.getElementById('question').value})
+    });
+
+    const data = await res.json();
+    waitStatus.style.display = 'none';
+
+    responseDiv.innerText = data.answer || 'Немає відповіді';
+
+    if (data.audio_base64) {
+      // Декодуємо base64 у Blob
+      const binary = atob(data.audio_base64);
+      const array = [];
+      for (let i = 0; i < binary.length; i++) {
+        array.push(binary.charCodeAt(i));
+      }
+      audioBlob = new Blob([new Uint8Array(array)], { type: 'audio/mp3' });
+      playBtn.style.display = 'inline-block';
+    } else {
+      playBtn.style.display = 'none';
+      audioBlob = null;
+    }
+  } catch (err) {
+    waitStatus.style.display = 'none';
+    responseDiv.innerText = '⚠️ Помилка: ' + err.message;
+    playBtn.style.display = 'none';
+    audioBlob = null;
+  }
+}
+
+// Відправка по Enter
+document.getElementById('question').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+});    
   </script>
 </body>
 </html>

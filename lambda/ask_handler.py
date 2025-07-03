@@ -4,10 +4,36 @@ import boto3
 import botocore
 from openai import OpenAI
 import os
+from langdetect import detect
 
 print("boto3:", boto3.__version__)
 print("botocore:", botocore.__version__)
 
+def synthesize_speech(text, lang='uk'):
+    region = 'us-east-1' if lang == 'uk' else 'eu-central-1'
+    polly = boto3.client('polly', region_name=region)
+    voice_id = 'Oksana' if lang == 'uk' else 'Joanna'
+    response = polly.synthesize_speech(
+        Text=text,
+        OutputFormat='mp3',
+        VoiceId=voice_id
+    )
+    audio_bytes = response['AudioStream'].read()
+    audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+    return audio_base64
+
+def detect_lang(text):
+    try:
+        lang = detect(text)
+        # langdetect повертає "en", "uk" тощо
+        if lang == 'uk':
+            return 'uk'
+        else:
+            return 'en'
+    except Exception as e:
+        print(f"Langdetect error: {e}")
+        return 'en'  # дефолтна англійська
+    
 kb_id = os.environ.get('BEDROCK_KB_ID')
 
 def get_bedrock_kb_context(question, kb_id):
@@ -130,6 +156,7 @@ def handler(event, context):
 
     # 1. Витягуємо релевантний контекст через AWS RAG (Bedrock Knowledge Base)
     try:
+        print(f"question: {question}")
         rag_context = get_bedrock_kb_context(question, kb_id)
         print(f"🔗 RAG context: {rag_context}")
     except Exception as e:
@@ -152,6 +179,16 @@ def handler(event, context):
         print(f"❌ GPT помилка: {e}")
         gpt_answer = "Виникла помилка при зверненні до GPT."
 
+    # 3. Синтезуємо аудіо через Polly
+    try:
+        lang = detect_lang(gpt_answer)
+        print(f"lang: {lang}")
+        lang = 'en'
+        audio_base64 = synthesize_speech(gpt_answer, lang=lang)
+    except Exception as e:
+        print(f"❌ Polly помилка: {e}")
+        audio_base64 = None
+
     return {
         "statusCode": 200,
         "headers": {
@@ -163,6 +200,7 @@ def handler(event, context):
         "body": json.dumps({
             "question": question,
             "answer": gpt_answer,
-            "user_role": groups
+            "user_role": groups,
+            "audio_base64": audio_base64
         })
     }
